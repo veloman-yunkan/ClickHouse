@@ -595,6 +595,18 @@ void ColumnWithDictionary::Index::checkSizeOfType()
                         ", but positions are " + positions->getName(), ErrorCodes::LOGICAL_ERROR);
 }
 
+void ColumnWithDictionary::Index::countKeys(ColumnUInt64::Container & counts) const
+{
+    auto counter = [&](auto x)
+    {
+        using CurIndexType = decltype(x);
+        auto & data = getPositionsData<CurIndexType>();
+        for (auto pos : data)
+            ++counts[pos];
+    };
+    callForType(std::move(counter), size_of_type);
+}
+
 
 ColumnWithDictionary::Dictionary::Dictionary(MutableColumnPtr && column_unique_)
     : column_unique(std::move(column_unique_))
@@ -637,19 +649,6 @@ void ColumnWithDictionary::Dictionary::compact(ColumnPtr & positions)
     column_unique = std::move(new_column_unique);
 
     shared = false;
-}
-
-
-void ColumnWithDictionary::Dictionary::countKeys(ColumnUInt64::Container & counts) const
-{
-    auto counter = [&](auto x)
-    {
-        using CurIndexType = decltype(x);
-        auto & data = getPositionsData<CurIndexType>();
-        for (auto pos : data)
-            ++counts[pos];
-    };
-    callForType(std::move(counter), size_of_type);
 }
 
 }
