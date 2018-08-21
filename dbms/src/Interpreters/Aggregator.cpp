@@ -928,7 +928,7 @@ bool Aggregator::executeOnBlock(const Block & block, AggregatedDataVariants & re
         /// When there is no dynamically compiled code.
         else
         {
-            if (params.keys_size == 1 && key_columns[0]->withDictionary())
+            if (params.keys_size == 1 && !key_counts.empty())
             {
             #define M(NAME, IS_TWO_LEVEL) \
                 else if (result.type == AggregatedDataVariants::Type::NAME) \
