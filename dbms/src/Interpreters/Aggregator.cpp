@@ -928,15 +928,28 @@ bool Aggregator::executeOnBlock(const Block & block, AggregatedDataVariants & re
         /// When there is no dynamically compiled code.
         else
         {
-        #define M(NAME, IS_TWO_LEVEL) \
-            else if (result.type == AggregatedDataVariants::Type::NAME) \
-                executeImpl(*result.NAME, result.aggregates_pool, rows, key_columns, &aggregate_functions_instructions[0], \
-                    result.key_sizes, key, no_more_keys, overflow_row_ptr);
+            if (params.keys_size == 1 and key_columns[0]->withDictionary())
+            {
+            #define M(NAME, IS_TWO_LEVEL) \
+                else if (result.type == AggregatedDataVariants::Type::NAME) \
+                    executeLowCardinalityImpl(*result.NAME, result.aggregates_pool, rows, key_columns, key_counts, \
+                        &aggregate_functions_instructions[0], result.key_sizes, key, no_more_keys, overflow_row_ptr);
 
-            if (false) {}
-            APPLY_FOR_AGGREGATED_VARIANTS(M)
-        #undef M
-        }
+                if (false) {}
+                APPLY_FOR_AGGREGATED_VARIANTS(M)
+            #undef M
+            }
+            else
+            {
+            #define M(NAME, IS_TWO_LEVEL) \
+                else if (result.type == AggregatedDataVariants::Type::NAME) \
+                    executeImpl(*result.NAME, result.aggregates_pool, rows, key_columns, &aggregate_functions_instructions[0], \
+                        result.key_sizes, key, no_more_keys, overflow_row_ptr);
+
+                if (false) {}
+                APPLY_FOR_AGGREGATED_VARIANTS(M)
+            #undef M
+            }
     }
 
     size_t result_size = result.sizeWithoutOverflowRow();
