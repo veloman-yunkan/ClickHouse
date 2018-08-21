@@ -25,6 +25,7 @@
 #if __has_include(<Interpreters/config_compile.h>)
 #include <Interpreters/config_compile.h>
 #include <Columns/ColumnWithDictionary.h>
+#include <DataTypes/DataTypeWithDictionary.h>
 
 #endif
 
@@ -379,13 +380,14 @@ AggregatedDataVariants::Type Aggregator::chooseAggregationMethod()
     {
         const auto & type = (params.src_header ? params.src_header : params.intermediate_header).safeGetByPosition(pos).type;
 
+
         if (type->isNullable())
         {
             has_nullable_key = true;
-            types_removed_nullable.push_back(removeNullable(type));
+            types_removed_nullable.push_back(removeNullable(removeLowCardinality(type)));
         }
         else
-            types_removed_nullable.push_back(type);
+            types_removed_nullable.push_back(removeLowCardinality(type));
     }
 
     /** Returns ordinary (not two-level) methods, because we start from them.

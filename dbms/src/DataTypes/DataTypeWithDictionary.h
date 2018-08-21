@@ -167,4 +167,11 @@ private:
     static MutableColumnUniquePtr createColumnUniqueImpl(const IDataType & keys_type, const Creator & creator);
 };
 
+DataTypePtr removeLowCardinality(const DataTypePtr & type)
+{
+    if (auto * type_with_dictionary = typeid_cast<const DataTypeWithDictionary *>(type.get()))
+        return type_with_dictionary->getDictionaryType();
+    return type;
+}
+
 }
