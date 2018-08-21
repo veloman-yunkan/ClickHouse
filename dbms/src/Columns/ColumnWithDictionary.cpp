@@ -442,7 +442,7 @@ typename ColumnVector<IndexType>::Container & ColumnWithDictionary::Index::getPo
 }
 
 template <typename IndexType>
-typename const ColumnVector<IndexType>::Container & ColumnWithDictionary::Index::getPositionsData() const
+const typename ColumnVector<IndexType>::Container & ColumnWithDictionary::Index::getPositionsData() const
 {
     const auto * positions_ptr = typeid_cast<const ColumnVector<IndexType> *>(positions.get());
     if (!positions_ptr)
