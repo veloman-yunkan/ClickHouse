@@ -950,6 +950,7 @@ bool Aggregator::executeOnBlock(const Block & block, AggregatedDataVariants & re
                 APPLY_FOR_AGGREGATED_VARIANTS(M)
             #undef M
             }
+        }
     }
 
     size_t result_size = result.sizeWithoutOverflowRow();
