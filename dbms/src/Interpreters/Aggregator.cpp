@@ -816,6 +816,21 @@ bool Aggregator::executeOnBlock(const Block & block, AggregatedDataVariants & re
     /// `result` will destroy the states of aggregate functions in the destructor
     result.aggregator = this;
 
+    /// How to perform the aggregation?
+    if (result.empty())
+    {
+        result.init(method);
+        result.keys_size = params.keys_size;
+        result.key_sizes = key_sizes;
+        LOG_TRACE(log, "Aggregation method: " << result.getMethodName());
+
+        if (params.compiler)
+            compileIfPossible(result.type);
+    }
+
+    if (isCancelled())
+        return true;
+
     for (size_t i = 0; i < params.aggregates_size; ++i)
         aggregate_columns[i].resize(params.aggregates[i].arguments.size());
 
@@ -873,21 +888,6 @@ bool Aggregator::executeOnBlock(const Block & block, AggregatedDataVariants & re
         return true;
 
     size_t rows = block.rows();
-
-    /// How to perform the aggregation?
-    if (result.empty())
-    {
-        result.init(method);
-        result.keys_size = params.keys_size;
-        result.key_sizes = key_sizes;
-        LOG_TRACE(log, "Aggregation method: " << result.getMethodName());
-
-        if (params.compiler)
-            compileIfPossible(result.type);
-    }
-
-    if (isCancelled())
-        return true;
 
     if ((params.overflow_row || result.type == AggregatedDataVariants::Type::without_key) && !result.without_key)
     {
