@@ -108,7 +108,7 @@ Block Aggregator::getHeader(bool final) const
                 col.column = col_with_dict->getDictionary().getNestedColumn()->cloneEmpty();
                 col.type = removeLowCardinality(col.type);
             }
-            res.insert(std::move(cool));
+            res.insert(std::move(col));
         }
 
         for (size_t i = 0; i < params.aggregates_size; ++i)
