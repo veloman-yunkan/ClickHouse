@@ -156,6 +156,11 @@ struct AggregationMethodOneNumber
     {
         static_cast<ColumnVector<FieldType> *>(key_columns[0].get())->insertData(reinterpret_cast<const char *>(&value.first), sizeof(value.first));
     }
+
+    static StringRef getRef(const typename Data::value_type & value)
+    {
+        return StringRef(reinterpret_cast<const char *>(&value.first), sizeof(value.first));
+    }
 };
 
 
@@ -214,6 +219,11 @@ struct AggregationMethodString
     static void onExistingKey(const Key & /*key*/, StringRefs & /*keys*/, Arena & /*pool*/) {}
 
     static const bool no_consecutive_keys_optimization = false;
+
+    static StringRef getRef(const typename Data::value_type & value)
+    {
+        return StringRef(value.first.data, value.first.size);
+    }
 
     static void insertKeyIntoColumns(const typename Data::value_type & value, MutableColumns & key_columns, size_t, const Sizes &)
     {
@@ -275,6 +285,11 @@ struct AggregationMethodFixedString
     static void onExistingKey(const Key &, StringRefs &, Arena &) {}
 
     static const bool no_consecutive_keys_optimization = false;
+
+    static StringRef getRef(const typename Data::value_type & value)
+    {
+        return StringRef(value.first.data, value.first.size);
+    }
 
     static void insertKeyIntoColumns(const typename Data::value_type & value, MutableColumns & key_columns, size_t, const Sizes &)
     {
@@ -353,7 +368,8 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
 
     static void insertKeyIntoColumns(const typename Data::value_type & value, MutableColumns & key_columns, size_t /*keys_size*/, const Sizes & /*key_sizes*/)
     {
-        static_cast<ColumnWithDictionary *>(key_columns[0].get())->insertData(reinterpret_cast<const char *>(&value.first), sizeof(value.first));
+        auto ref = Base::getRef(value);
+        static_cast<ColumnWithDictionary *>(key_columns[0].get())->insertData(ref.data, ref.size);
     }
 };
 
