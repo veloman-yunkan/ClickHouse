@@ -281,6 +281,79 @@ struct AggregationMethodFixedString
     }
 };
 
+
+/// Single low cardinality column.
+template <typename SingleColumnMethod>
+struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
+{
+    using Base = SingleColumnMethod;
+    using BaseState = typename Base::State;
+
+    using Data = typename Base::Data;
+    using Key = typename Base::Key;
+    using Mapped = typename Base::Mapped;
+    using iterator = typename Base::iterator;
+    using const_iterator = typename Base::const_iterator;
+
+    Data data;
+
+    AggregationMethodSingleLowCardinalityColumn() = default;
+
+    template <typename Other>
+    explicit AggregationMethodSingleLowCardinalityColumn(const Other & other) : Base(other) {}
+
+    struct State : public BaseState
+    {
+        ColumnRawPtrs key;
+        const ColumnWithDictionary * column;
+
+        /** Called at the start of each block processing.
+          * Sets the variables needed for the other methods called in inner loops.
+          */
+        void init(ColumnRawPtrs & key_columns)
+        {
+            column = static_cast<const ColumnWithDictionary *>(key_columns[0]);
+            key = {column->getDictionary().getNestedColumn()};
+
+            BaseState::init(key);
+        }
+
+        /// Get the key from the key columns for insertion into the hash table.
+        Key getKey(
+                const ColumnRawPtrs & /*key_columns*/,
+                size_t /*keys_size*/,
+                size_t i,
+                const Sizes & key_sizes,
+                StringRefs & keys,
+                Arena & pool) const
+        {
+            size_t row = column->getIndexes()->getUInt(i);
+            return BaseState::getKey(key, 1, row, key_sizes, keys, pool);
+        }
+    };
+
+    static AggregateDataPtr & getAggregateData(Mapped & value)                { return Base::getAggregateData(value); }
+    static const AggregateDataPtr & getAggregateData(const Mapped & value)    { return Base::getAggregateData(value); }
+
+    static void onNewKey(typename Data::value_type & value, size_t keys_size, StringRefs & keys, Arena & pool)
+    {
+        return Base::OnNewKey(value, keys_size, pool);
+    }
+
+    static void onExistingKey(const Key & key, StringRefs & keys, Arena & pool)
+    {
+        return Base::onExistingKey(key, keys, pool);
+    }
+
+    using Base::no_consecutive_keys_optimization;
+
+    static void insertKeyIntoColumns(const typename Data::value_type & value, MutableColumns & key_columns, size_t /*keys_size*/, const Sizes & /*key_sizes*/)
+    {
+        static_cast<ColumnWithDictionary *>(key_columns[0].get())->insertData(reinterpret_cast<const char *>(&value.first), sizeof(value.first));
+    }
+};
+
+
 namespace aggregator_impl
 {
 
@@ -757,6 +830,19 @@ struct AggregatedDataVariants : private boost::noncopyable
     std::unique_ptr<AggregationMethodKeysFixed<AggregatedDataWithKeys128TwoLevel, true>>     nullable_keys128_two_level;
     std::unique_ptr<AggregationMethodKeysFixed<AggregatedDataWithKeys256TwoLevel, true>>     nullable_keys256_two_level;
 
+    /// Support for low cardinality.
+    std::unique_ptr<AggregationMethodSingleLowCardinalityColumn<AggregationMethodOneNumber<UInt8, AggregatedDataWithUInt8Key>>> low_cardinality_key8;
+    std::unique_ptr<AggregationMethodSingleLowCardinalityColumn<AggregationMethodOneNumber<UInt16, AggregatedDataWithUInt16Key>>> low_cardinality_key16;
+    std::unique_ptr<AggregationMethodSingleLowCardinalityColumn<AggregationMethodOneNumber<UInt32, AggregatedDataWithUInt64Key>>> low_cardinality_key32;
+    std::unique_ptr<AggregationMethodSingleLowCardinalityColumn<AggregationMethodOneNumber<UInt64, AggregatedDataWithUInt64Key>>> low_cardinality_key64;
+    std::unique_ptr<AggregationMethodSingleLowCardinalityColumn<AggregationMethodString<AggregatedDataWithStringKey>>> low_cardinality_key_string;
+    std::unique_ptr<AggregationMethodSingleLowCardinalityColumn<AggregationMethodFixedString<AggregatedDataWithStringKey>>> low_cardinality_key_fixed_string;
+
+    std::unique_ptr<AggregationMethodSingleLowCardinalityColumn<AggregationMethodOneNumber<UInt32, AggregatedDataWithUInt64KeyTwoLevel>>> low_cardinality_key32_two_level;
+    std::unique_ptr<AggregationMethodSingleLowCardinalityColumn<AggregationMethodOneNumber<UInt64, AggregatedDataWithUInt64KeyTwoLevel>>> low_cardinality_key64_two_level;
+    std::unique_ptr<AggregationMethodSingleLowCardinalityColumn<AggregationMethodString<AggregatedDataWithStringKeyTwoLevel>>> low_cardinality_key_string_two_level;
+    std::unique_ptr<AggregationMethodSingleLowCardinalityColumn<AggregationMethodFixedString<AggregatedDataWithStringKeyTwoLevel>>> low_cardinality_key_fixed_string_two_level;
+
     /// In this and similar macros, the option without_key is not considered.
     #define APPLY_FOR_AGGREGATED_VARIANTS(M) \
         M(key8,                       false) \
@@ -790,6 +876,16 @@ struct AggregatedDataVariants : private boost::noncopyable
         M(nullable_keys256,           false) \
         M(nullable_keys128_two_level, true) \
         M(nullable_keys256_two_level, true) \
+        M(low_cardinality_key8, false) \
+        M(low_cardinality_key16, false) \
+        M(low_cardinality_key32, false) \
+        M(low_cardinality_key64, false) \
+        M(low_cardinality_key_string, false) \
+        M(low_cardinality_key_fixed_string, false) \
+        M(low_cardinality_key32_two_level, true) \
+        M(low_cardinality_key64_two_level, true) \
+        M(low_cardinality_key_string_two_level, true) \
+        M(low_cardinality_key_fixed_string_two_level, true) \
 
     enum class Type
     {
@@ -909,6 +1005,10 @@ struct AggregatedDataVariants : private boost::noncopyable
         M(serialized)       \
         M(nullable_keys128) \
         M(nullable_keys256) \
+        M(low_cardinality_key32) \
+        M(low_cardinality_key64) \
+        M(low_cardinality_key_string) \
+        M(low_cardinality_key_fixed_string) \
 
     #define APPLY_FOR_VARIANTS_NOT_CONVERTIBLE_TO_TWO_LEVEL(M) \
         M(key8)             \
@@ -920,6 +1020,8 @@ struct AggregatedDataVariants : private boost::noncopyable
         M(keys256_hash64)   \
         M(concat_hash64)    \
         M(serialized_hash64) \
+        M(low_cardinality_key8) \
+        M(low_cardinality_key16) \
 
     #define APPLY_FOR_VARIANTS_SINGLE_LEVEL(M) \
         APPLY_FOR_VARIANTS_NOT_CONVERTIBLE_TO_TWO_LEVEL(M) \
@@ -953,7 +1055,37 @@ struct AggregatedDataVariants : private boost::noncopyable
         M(concat_two_level)           \
         M(serialized_two_level)       \
         M(nullable_keys128_two_level) \
-        M(nullable_keys256_two_level)
+        M(nullable_keys256_two_level) \
+        M(low_cardinality_key32_two_level) \
+        M(low_cardinality_key64_two_level) \
+        M(low_cardinality_key_string_two_level) \
+        M(low_cardinality_key_fixed_string_two_level) \
+
+    #define APPLY_FOR_LOW_CARDINALITY_VARIANTS(M) \
+        M(low_cardinality_key8) \
+        M(low_cardinality_key16) \
+        M(low_cardinality_key32) \
+        M(low_cardinality_key64) \
+        M(low_cardinality_key_string) \
+        M(low_cardinality_key_fixed_string) \
+        M(low_cardinality_key32_two_level) \
+        M(low_cardinality_key64_two_level) \
+        M(low_cardinality_key_string_two_level) \
+        M(low_cardinality_key_fixed_string_two_level) \
+
+    bool isLowCardinality()
+    {
+        switch (type)
+        {
+        #define M(NAME) \
+            case Type::NAME: return true;
+
+            APPLY_FOR_LOW_CARDINALITY_VARIANTS(M)
+        #undef M
+            default:
+                return false;
+        }
+    }
 };
 
 using AggregatedDataVariantsPtr = std::shared_ptr<AggregatedDataVariants>;
