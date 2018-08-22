@@ -26,6 +26,7 @@
 #include <Columns/ColumnAggregateFunction.h>
 #include <Columns/ColumnVector.h>
 #include <Columns/ColumnNullable.h>
+#include <Columns/ColumnWithDictionary.h>
 
 
 namespace DB
