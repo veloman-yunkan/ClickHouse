@@ -328,7 +328,7 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
                 StringRefs & keys,
                 Arena & pool) const
         {
-            size_t row = column->getIndexes()->getUInt(i);
+            size_t row = column->getIndexes().getUInt(i);
             return BaseState::getKey(key, 1, row, key_sizes, keys, pool);
         }
     };
