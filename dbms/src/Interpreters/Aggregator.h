@@ -314,7 +314,7 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
         void init(ColumnRawPtrs & key_columns)
         {
             column = static_cast<const ColumnWithDictionary *>(key_columns[0]);
-            key = {column->getDictionary().getNestedColumn()};
+            key = {column->getDictionary().getNestedColumn().get()};
 
             BaseState::init(key);
         }
