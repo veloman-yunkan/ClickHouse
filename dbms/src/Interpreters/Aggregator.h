@@ -338,7 +338,7 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
 
     static void onNewKey(typename Data::value_type & value, size_t keys_size, StringRefs & keys, Arena & pool)
     {
-        return Base::OnNewKey(value, keys_size, pool);
+        return Base::onNewKey(value, keys_size, keys, pool);
     }
 
     static void onExistingKey(const Key & key, StringRefs & keys, Arena & pool)
