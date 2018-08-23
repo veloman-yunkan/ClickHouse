@@ -472,7 +472,7 @@ protected:
 }
 
 /// For the case where all keys are of fixed length, and they fit in N (for example, 128) bits.
-template <typename TData, bool has_nullable_keys_ = false>
+template <typename TData, bool has_nullable_keys_, bool has_low_cardinality_keys_>
 struct AggregationMethodKeysFixed
 {
     using Data = TData;
@@ -481,6 +481,7 @@ struct AggregationMethodKeysFixed
     using iterator = typename Data::iterator;
     using const_iterator = typename Data::const_iterator;
     static constexpr bool has_nullable_keys = has_nullable_keys_;
+    static constexpr bool has_low_cardinality_keys = has_low_cardinality_keys_;
 
     Data data;
 

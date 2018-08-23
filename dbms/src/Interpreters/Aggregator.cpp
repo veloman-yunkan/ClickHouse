@@ -484,7 +484,7 @@ AggregatedDataVariants::Type Aggregator::chooseAggregationMethod()
     }
 
     /// If all keys fits in N bits, will use hash table with all keys packed (placed contiguously) to single N-bit key.
-    if (params.keys_size == num_fixed_contiguous_keys)
+    if (params.keys_size == num_fixed_contiguous_keys && !has_low_cardinality)
     {
         if (keys_bytes <= 16)
             return AggregatedDataVariants::Type::keys128;
