@@ -404,17 +404,17 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
 
                 if (inserted)
                     Base::onNewKey(*it, keys_size, keys, pool);
-                else
-                    aggregate_data_cache[row] = Base::getAggregateData(it->second);
+                //else
+                //    aggregate_data_cache[row] = Base::getAggregateData(it->second);
 
                 return &Base::getAggregateData(it->second);
             }
         }
 
-        void cacheAggregateData(size_t i, AggregateDataPtr data)
+        void cacheAggregateData(size_t /*i*/, AggregateDataPtr /*data*/)
         {
-            size_t row = getIndexAt(i);
-            aggregate_data_cache[row] = data;
+            //size_t row = getIndexAt(i);
+            //aggregate_data_cache[row] = data;
         }
 
         template <typename D>
@@ -430,7 +430,8 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
             {
                 auto it = data.find(key);
                 if (it != data.end())
-                    aggregate_data_cache[row] = Base::getAggregateData(it->second);
+                    //aggregate_data_cache[row] =
+                    return &Base::getAggregateData(it->second);
             }
             return &aggregate_data_cache[row];
         }
