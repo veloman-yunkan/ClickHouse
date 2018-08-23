@@ -357,8 +357,9 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
             return BaseState::getKey(key, 1, row, key_sizes, keys, pool);
         }
 
+        template <typename D>
         AggregateDataPtr * emplaceKeyFromRow(
-            Data & data,
+            D & data,
             Key key,
             size_t i,
             bool & inserted,
@@ -385,7 +386,8 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
             }
         }
 
-        AggregateDataPtr * findFromRow(Data & data, size_t i)
+        template <typename D>
+        AggregateDataPtr * findFromRow(D & data, size_t i)
         {
             size_t row = column->getIndexAt(i);
             if (!aggregate_data_cache[row])
