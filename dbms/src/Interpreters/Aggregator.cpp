@@ -884,6 +884,12 @@ bool Aggregator::executeOnBlock(const Block & block, AggregatedDataVariants & re
                 materialized_columns.push_back(converted);
                 aggregate_columns[i][j] = materialized_columns.back().get();
             }
+
+            if (auto * col_with_dict = typeid_cast<ColumnWithDictionary *>(aggregate_columns[i][j]))
+            {
+                materialized_columns.push_back(col_with_dict->convertToFullColumn());
+                aggregate_columns[i][j] = materialized_columns.back().get();
+            }
         }
 
         aggregate_functions_instructions[i].that = aggregate_functions[i];
