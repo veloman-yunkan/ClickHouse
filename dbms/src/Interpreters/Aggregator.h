@@ -341,7 +341,8 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
 
             BaseState::init(key);
 
-            aggregate_data_cache.assign(key[0]->size(), nullptr);
+            AggregateDataPtr default_data = nullptr;
+            aggregate_data_cache.assign(key[0]->size(), default_data);
         }
 
         /// Get the key from the key columns for insertion into the hash table.
