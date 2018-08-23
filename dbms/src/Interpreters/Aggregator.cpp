@@ -628,7 +628,7 @@ void NO_INLINE Aggregator::executeImplCase(
             }
 
             if (Method::low_cardinality_optimization)
-                aggregate_data = state.emplaceKeyFromRow(method.data, key, i, inserted, key_sizes, keys, *aggregates_pool);
+                aggregate_data = state.emplaceKeyFromRow(method.data, key, i, inserted, params.keys_size, keys, *aggregates_pool);
             else
             {
                 method.data.emplace(key, it, inserted);
@@ -1946,7 +1946,7 @@ void NO_INLINE Aggregator::mergeStreamsImplCase(
         if (!no_more_keys)
         {
             if (Method::low_cardinality_optimization)
-                aggregate_data = state.emplaceKeyFromRow(data, key, i, inserted, key_sizes, keys, *aggregates_pool);
+                aggregate_data = state.emplaceKeyFromRow(data, key, i, inserted, params.keys_size, keys, *aggregates_pool);
             else
             {
                 data.emplace(key, it, inserted);

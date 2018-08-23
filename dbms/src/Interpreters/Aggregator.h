@@ -358,7 +358,7 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
             Key key,
             size_t i,
             bool & inserted,
-            const Sizes & key_sizes,
+            size_t keys_size,
             StringRefs & keys,
             Arena & pool)
         {
