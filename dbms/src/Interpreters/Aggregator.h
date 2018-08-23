@@ -376,7 +376,7 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
             }
             else
             {
-                iterator it;
+                typename D::iterator it;
                 data.emplace(key, it, inserted);
 
                 if (inserted)
