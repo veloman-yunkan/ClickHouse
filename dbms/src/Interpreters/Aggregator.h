@@ -404,6 +404,8 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
 
                 if (inserted)
                     Base::onNewKey(*it, keys_size, keys, pool);
+                else
+                    aggregate_data_cache[row] = Base::getAggregateData(it->second);
 
                 return &Base::getAggregateData(it->second);
             }
