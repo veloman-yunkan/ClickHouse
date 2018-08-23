@@ -509,6 +509,17 @@ UInt64 ColumnWithDictionary::Index::getMaxPositionForCurrentType() const
     return value;
 }
 
+size_t ColumnWithDictionary::Index::getPositionAt(size_t row) const
+{
+    auto getPosition = [&](auto type)
+    {
+        using CurIndexType = decltype(type);
+        return getPositionsData<CurIndexType>()[row];
+    };
+
+    callForType(std::move(getPosition), size_of_type);
+}
+
 void ColumnWithDictionary::Index::insertPosition(UInt64 position)
 {
     while (position > getMaxPositionForCurrentType())

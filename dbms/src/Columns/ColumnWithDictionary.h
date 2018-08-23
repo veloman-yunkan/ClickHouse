@@ -144,6 +144,7 @@ public:
     /// IColumn & getIndexes() { return idx.getPositions()->assumeMutableRef(); }
     const IColumn & getIndexes() const { return *idx.getPositions(); }
     const ColumnPtr & getIndexesPtr() const { return idx.getPositions(); }
+    size_t getIndexAt(size_t row) const { return idx.getPositionAt(row); }
 
     ///void setIndexes(MutableColumnPtr && indexes_) { indexes = std::move(indexes_); }
 
@@ -176,6 +177,7 @@ public:
 
         const ColumnPtr & getPositions() const { return positions; }
         ColumnPtr & getPositionsPtr() { return positions; }
+        size_t getPositionAt(size_t row) const;
         void insertPosition(UInt64 position);
         void insertPositionsRange(const IColumn & column, size_t offset, size_t limit);
 

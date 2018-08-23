@@ -148,7 +148,7 @@ struct AggregationMethodOneNumber
 
     /** Do not use optimization for consecutive keys.
       */
-    static const bool no_consecutive_keys_optimization = false;
+    static const bool no_consecutive_keys_optimization = true;
 
     /** Insert the key from the hash table into columns.
       */
@@ -322,6 +322,7 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
     {
         ColumnRawPtrs key;
         const ColumnWithDictionary * column;
+        PaddedPODArray<AggregateDataPtr> aggregate_data_cache;
 
         /** Called at the start of each block processing.
           * Sets the variables needed for the other methods called in inner loops.
@@ -335,6 +336,8 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
             key = {column->getDictionary().getNestedColumn().get()};
 
             BaseState::init(key);
+
+            aggregate_data_cache.assign(key[0]->size(), nullptr);
         }
 
         /// Get the key from the key columns for insertion into the hash table.
@@ -346,8 +349,37 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
                 StringRefs & keys,
                 Arena & pool) const
         {
-            size_t row = column->getIndexes().getUInt(i);
+            size_t row = column->getIndexAt(i);
             return BaseState::getKey(key, 1, row, key_sizes, keys, pool);
+        }
+
+        AggregateDataPtr * emplaceKeyFromRow(Data & data, Key key, size_t i, bool & inserted)
+        {
+            size_t row = column->getIndexAt(i);
+            if (aggregate_data_cache[row])
+            {
+                inserted = false;
+                return &aggregate_data_cache[row];
+            }
+            else
+            {
+                iterator it;
+                data.emplace(key, it, inserted);
+                aggregate_data_cache[row] = Base::getAggregateData(it->second);
+                return &Base::getAggregateData(it->second);
+            }
+        }
+
+        AggregateDataPtr * findFromRow(Data & data, size_t i)
+        {
+            size_t row = column->getIndexAt(i);
+            if (!aggregate_data_cache[row])
+            {
+                auto it = data.find(key);
+                if (it != data.end())
+                    aggregate_data_cache[row] = Base::getAggregateData(it->second);
+            }
+            return &aggregate_data_cache[row];
         }
     };
 
@@ -364,7 +396,8 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
         return Base::onExistingKey(key, keys, pool);
     }
 
-    using Base::no_consecutive_keys_optimization;
+    static const bool no_consecutive_keys_optimization = true;
+    static const bool low_cardinality_optimization = true;
 
     static void insertKeyIntoColumns(const typename Data::value_type & value, MutableColumns & key_columns, size_t /*keys_size*/, const Sizes & /*key_sizes*/)
     {
