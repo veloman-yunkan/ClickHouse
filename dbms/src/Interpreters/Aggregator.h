@@ -388,7 +388,7 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
         }
 
         template <typename D>
-        AggregateDataPtr * findFromRow(D & data, size_t i)
+        AggregateDataPtr * findFromRow(D & data, Key key, size_t i)
         {
             size_t row = column->getIndexAt(i);
             if (!aggregate_data_cache[row])
