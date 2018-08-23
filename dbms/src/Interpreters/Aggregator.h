@@ -326,7 +326,9 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
     {
         ColumnRawPtrs key;
         const ColumnWithDictionary * column;
+        const IColumn * positions;
         PaddedPODArray<AggregateDataPtr> aggregate_data_cache;
+        size_t size_of_index_type = 0;
 
         /** Called at the start of each block processing.
           * Sets the variables needed for the other methods called in inner loops.
@@ -338,11 +340,25 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
                 throw Exception("Invalid aggregation key type for AggregationMethodSingleLowCardinalityColumn method. "
                                 "Excepted LowCardinality, got " + key_columns[0]->getName(), ErrorCodes::LOGICAL_ERROR);
             key = {column->getDictionary().getNestedColumn().get()};
+            positions = column->getIndexesPtr().get();
+            size_of_index_type = column->getSizeOfIndexType();
 
             BaseState::init(key);
 
             AggregateDataPtr default_data = nullptr;
             aggregate_data_cache.assign(key[0]->size(), default_data);
+        }
+
+        size_t getIndexAt(size_t row) const
+        {
+            switch (size_of_index_type)
+            {
+                case 8: return static_cast<const ColumnUInt8 *>(positions)->getElement(row);
+                case 16: return static_cast<const ColumnUInt16 *>(positions)->getElement(row);
+                case 32: return static_cast<const ColumnUInt32 *>(positions)->getElement(row);
+                case 64: return static_cast<const ColumnUInt64 *>(positions)->getElement(row);
+                default: throw Exception("Unexpected size of index type for low cardinality column.", ErrorCodes::LOGICAL_ERROR);
+            }
         }
 
         /// Get the key from the key columns for insertion into the hash table.
@@ -354,7 +370,7 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
             StringRefs & keys,
             Arena & pool) const
         {
-            size_t row = column->getIndexAt(i);
+            size_t row = getIndexAt(i);
             return BaseState::getKey(key, 1, row, key_sizes, keys, pool);
         }
 
@@ -368,7 +384,7 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
             StringRefs & keys,
             Arena & pool)
         {
-            size_t row = column->getIndexAt(i);
+            size_t row = getIndexAt(i);
             if (aggregate_data_cache[row])
             {
                 inserted = false;
