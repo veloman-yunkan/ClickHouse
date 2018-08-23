@@ -380,7 +380,7 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
                 data.emplace(key, it, inserted);
 
                 if (inserted)
-                    return Base::onNewKey(*it, keys_size, keys, pool);
+                    Base::onNewKey(*it, keys_size, keys, pool);
 
                 aggregate_data_cache[row] = Base::getAggregateData(it->second);
                 return &Base::getAggregateData(it->second);
