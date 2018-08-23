@@ -353,10 +353,10 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
         {
             switch (size_of_index_type)
             {
-                case 8: return static_cast<const ColumnUInt8 *>(positions)->getElement(row);
-                case 16: return static_cast<const ColumnUInt16 *>(positions)->getElement(row);
-                case 32: return static_cast<const ColumnUInt32 *>(positions)->getElement(row);
-                case 64: return static_cast<const ColumnUInt64 *>(positions)->getElement(row);
+                case sizeof(UInt8): return static_cast<const ColumnUInt8 *>(positions)->getElement(row);
+                case sizeof(UInt16): return static_cast<const ColumnUInt16 *>(positions)->getElement(row);
+                case sizeof(UInt32): return static_cast<const ColumnUInt32 *>(positions)->getElement(row);
+                case sizeof(UInt64): return static_cast<const ColumnUInt64 *>(positions)->getElement(row);
                 default: throw Exception("Unexpected size of index type for low cardinality column.", ErrorCodes::LOGICAL_ERROR);
             }
         }
