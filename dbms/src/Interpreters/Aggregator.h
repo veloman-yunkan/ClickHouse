@@ -329,6 +329,7 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
         const IColumn * positions;
         PaddedPODArray<AggregateDataPtr> aggregate_data_cache;
         size_t size_of_index_type = 0;
+        Arena * last_pool = nullptr;
 
         /** Called at the start of each block processing.
           * Sets the variables needed for the other methods called in inner loops.
@@ -347,6 +348,7 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
 
             AggregateDataPtr default_data = nullptr;
             aggregate_data_cache.assign(key[0]->size(), default_data);
+            last_pool = nullptr;
         }
 
         size_t getIndexAt(size_t row) const
@@ -387,6 +389,11 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
             size_t row = getIndexAt(i);
             if (aggregate_data_cache[row])
             {
+                if (last_pool && last_pool != &pool)
+                    throw Exception("Different pools for low cardinality aggregation data cache.", ErrorCodes::LOGICAL_ERROR);
+
+                last_pool = &pool;
+
                 inserted = false;
                 return &aggregate_data_cache[row];
             }
@@ -409,8 +416,13 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
         }
 
         template <typename D>
-        AggregateDataPtr * findFromRow(D & data, Key key, size_t i)
+        AggregateDataPtr * findFromRow(D & data, Key key, size_t i, Arena & pool)
         {
+            if (last_pool && last_pool != &pool)
+                throw Exception("Different pools for low cardinality aggregation data cache.", ErrorCodes::LOGICAL_ERROR);
+
+            last_pool = &pool;
+
             size_t row = column->getIndexAt(i);
             if (!aggregate_data_cache[row])
             {
