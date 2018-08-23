@@ -398,9 +398,14 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
                 if (inserted)
                     Base::onNewKey(*it, keys_size, keys, pool);
 
-                aggregate_data_cache[row] = Base::getAggregateData(it->second);
                 return &Base::getAggregateData(it->second);
             }
+        }
+
+        void cacheAggregateData(size_t i, AggregateDataPtr data)
+        {
+            size_t row = getIndexAt(i);
+            aggregate_data_cache[row] = Base::getAggregateData(data);
         }
 
         template <typename D>

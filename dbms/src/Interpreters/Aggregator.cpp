@@ -670,6 +670,9 @@ void NO_INLINE Aggregator::executeImplCase(
             AggregateDataPtr place = aggregates_pool->alloc(total_size_of_aggregate_states);
             createAggregateStates(place);
             *aggregate_data = place;
+
+            if constexpr (Method::low_cardinality_optimization)
+                state.cacheAggregateData(i, place);
         }
         else
             method.onExistingKey(key, keys, *aggregates_pool);
@@ -1985,6 +1988,9 @@ void NO_INLINE Aggregator::mergeStreamsImplCase(
             AggregateDataPtr place = aggregates_pool->alloc(total_size_of_aggregate_states);
             createAggregateStates(place);
             *aggregate_data = place;
+
+            if constexpr (Method::low_cardinality_optimization)
+                state.cacheAggregateData(i, place);
         }
         else
             method.onExistingKey(key, keys, *aggregates_pool);
