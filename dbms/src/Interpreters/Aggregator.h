@@ -342,18 +342,25 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
 
         /// Get the key from the key columns for insertion into the hash table.
         Key getKey(
-                const ColumnRawPtrs & /*key_columns*/,
-                size_t /*keys_size*/,
-                size_t i,
-                const Sizes & key_sizes,
-                StringRefs & keys,
-                Arena & pool) const
+            const ColumnRawPtrs & /*key_columns*/,
+            size_t /*keys_size*/,
+            size_t i,
+            const Sizes & key_sizes,
+            StringRefs & keys,
+            Arena & pool) const
         {
             size_t row = column->getIndexAt(i);
             return BaseState::getKey(key, 1, row, key_sizes, keys, pool);
         }
 
-        AggregateDataPtr * emplaceKeyFromRow(Data & data, Key key, size_t i, bool & inserted)
+        AggregateDataPtr * emplaceKeyFromRow(
+            Data & data,
+            Key key,
+            size_t i,
+            bool & inserted,
+            const Sizes & key_sizes,
+            StringRefs & keys,
+            Arena & pool)
         {
             size_t row = column->getIndexAt(i);
             if (aggregate_data_cache[row])
@@ -365,6 +372,10 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
             {
                 iterator it;
                 data.emplace(key, it, inserted);
+
+                if (inserted)
+                    return Base::onNewKey(*it, keys_size, keys, pool);
+
                 aggregate_data_cache[row] = Base::getAggregateData(it->second);
                 return &Base::getAggregateData(it->second);
             }
