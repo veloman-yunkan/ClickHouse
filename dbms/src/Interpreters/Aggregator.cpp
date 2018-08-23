@@ -627,7 +627,7 @@ void NO_INLINE Aggregator::executeImplCase(
                     prev_key = key;
             }
 
-            if (Method::low_cardinality_optimization)
+            if constexpr (Method::low_cardinality_optimization)
                 aggregate_data = state.emplaceKeyFromRow(method.data, key, i, inserted, params.keys_size, keys, *aggregates_pool);
             else
             {
@@ -639,7 +639,7 @@ void NO_INLINE Aggregator::executeImplCase(
         {
             /// Add only if the key already exists.
 
-            if (Method::low_cardinality_optimization)
+            if constexpr (Method::low_cardinality_optimization)
                 aggregate_data = state.findFromRow(method.data, i);
             else
             {
@@ -664,7 +664,7 @@ void NO_INLINE Aggregator::executeImplCase(
             /// exception-safety - if you can not allocate memory or create states, then destructors will not be called.
             *aggregate_data = nullptr;
 
-            if (!Method::low_cardinality_optimization)
+            if constexpr (!Method::low_cardinality_optimization)
                 method.onNewKey(*it, params.keys_size, keys, *aggregates_pool);
 
             AggregateDataPtr place = aggregates_pool->alloc(total_size_of_aggregate_states);
@@ -1945,7 +1945,7 @@ void NO_INLINE Aggregator::mergeStreamsImplCase(
 
         if (!no_more_keys)
         {
-            if (Method::low_cardinality_optimization)
+            if constexpr (Method::low_cardinality_optimization)
                 aggregate_data = state.emplaceKeyFromRow(data, key, i, inserted, params.keys_size, keys, *aggregates_pool);
             else
             {
@@ -1955,7 +1955,7 @@ void NO_INLINE Aggregator::mergeStreamsImplCase(
         }
         else
         {
-            if (Method::low_cardinality_optimization)
+            if constexpr (Method::low_cardinality_optimization)
                 aggregate_data = state.findFromRow(data, i);
             else
             {
@@ -1979,7 +1979,7 @@ void NO_INLINE Aggregator::mergeStreamsImplCase(
         {
             *aggregate_data = nullptr;
 
-            if (!Method::low_cardinality_optimization)
+            if constexpr (!Method::low_cardinality_optimization)
                 method.onNewKey(*it, params.keys_size, keys, *aggregates_pool);
 
             AggregateDataPtr place = aggregates_pool->alloc(total_size_of_aggregate_states);

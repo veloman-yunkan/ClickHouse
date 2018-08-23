@@ -149,6 +149,8 @@ struct AggregationMethodOneNumber
     /** Do not use optimization for consecutive keys.
       */
     static const bool no_consecutive_keys_optimization = true;
+    /// Use optimization for low cardinality.
+    static constexpr bool low_cardinality_optimization = false;
 
     /** Insert the key from the hash table into columns.
       */
@@ -219,6 +221,7 @@ struct AggregationMethodString
     static void onExistingKey(const Key & /*key*/, StringRefs & /*keys*/, Arena & /*pool*/) {}
 
     static const bool no_consecutive_keys_optimization = false;
+    static constexpr bool low_cardinality_optimization = false;
 
     static StringRef getRef(const typename Data::value_type & value)
     {
@@ -285,6 +288,7 @@ struct AggregationMethodFixedString
     static void onExistingKey(const Key &, StringRefs &, Arena &) {}
 
     static const bool no_consecutive_keys_optimization = false;
+    static constexpr bool low_cardinality_optimization = false;
 
     static StringRef getRef(const typename Data::value_type & value)
     {
@@ -572,6 +576,7 @@ struct AggregationMethodKeysFixed
     static void onExistingKey(const Key &, StringRefs &, Arena &) {}
 
     static const bool no_consecutive_keys_optimization = false;
+    static constexpr bool low_cardinality_optimization = false;
 
     static void insertKeyIntoColumns(const typename Data::value_type & value, MutableColumns & key_columns, size_t keys_size, const Sizes & key_sizes)
     {
@@ -673,6 +678,7 @@ struct AggregationMethodConcat
 
     /// If the key already was, then it is removed from the pool (overwritten), and the next key can not be compared with it.
     static const bool no_consecutive_keys_optimization = true;
+    static constexpr bool low_cardinality_optimization = false;
 
     static void insertKeyIntoColumns(const typename Data::value_type & value, MutableColumns & key_columns, size_t keys_size, const Sizes & key_sizes)
     {
@@ -758,6 +764,7 @@ struct AggregationMethodSerialized
 
     /// If the key already was, it is removed from the pool (overwritten), and the next key can not be compared with it.
     static const bool no_consecutive_keys_optimization = true;
+    static constexpr bool low_cardinality_optimization = false;
 
     static void insertKeyIntoColumns(const typename Data::value_type & value, MutableColumns & key_columns, size_t keys_size, const Sizes &)
     {
@@ -814,6 +821,7 @@ struct AggregationMethodHashed
     static void onExistingKey(const Key &, StringRefs &, Arena &) {}
 
     static const bool no_consecutive_keys_optimization = false;
+    static constexpr bool low_cardinality_optimization = false;
 
     static void insertKeyIntoColumns(const typename Data::value_type & value, MutableColumns & key_columns, size_t keys_size, const Sizes &)
     {
