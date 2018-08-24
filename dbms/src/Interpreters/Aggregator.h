@@ -445,7 +445,7 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
         void cacheAggregateData(size_t i, AggregateDataPtr data)
         {
             size_t row = getIndexAt(i);
-            aggregate_data_cache[row] = data;
+            cache->aggregate_data_cache[row] = data;
         }
 
         template <typename D>
