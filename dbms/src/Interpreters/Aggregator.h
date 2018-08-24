@@ -325,10 +325,10 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
     struct State : public BaseState
     {
         ColumnRawPtrs key;
-        const IColumn * positions;
+        const IColumn * positions = nullptr;
+        ColumnUInt64::Ptr saved_hash;
         PaddedPODArray<AggregateDataPtr> aggregate_data_cache;
         size_t size_of_index_type = 0;
-        Arena * last_pool = nullptr;
 
         void init(ColumnRawPtrs & key_columns)
         {
@@ -338,13 +338,13 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
                                 "Excepted LowCardinality, got " + key_columns[0]->getName(), ErrorCodes::LOGICAL_ERROR);
             key = {column->getDictionary().getNestedColumn().get()};
             positions = column->getIndexesPtr().get();
+            saved_hash = column->getDictionary().tryGetSavedHash();
             size_of_index_type = column->getSizeOfIndexType();
 
             BaseState::init(key);
 
             AggregateDataPtr default_data = nullptr;
             aggregate_data_cache.assign(key[0]->size(), default_data);
-            last_pool = nullptr;
         }
 
         size_t getIndexAt(size_t row) const
@@ -385,18 +385,16 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
             size_t row = getIndexAt(i);
             if (aggregate_data_cache[row])
             {
-                if (last_pool && last_pool != &pool)
-                    throw Exception("Different pools for low cardinality aggregation data cache.", ErrorCodes::LOGICAL_ERROR);
-
-                last_pool = &pool;
-
                 inserted = false;
                 return &aggregate_data_cache[row];
             }
             else
             {
                 typename D::iterator it;
-                data.emplace(key, it, inserted);
+                if (saved_hash)
+                    data.emplace(key, it, inserted, saved_hash->getElement(row));
+                else
+                    data.emplace(key, it, inserted);
 
                 if (inserted)
                     Base::onNewKey(*it, keys_size, keys, pool);
@@ -416,15 +414,15 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
         template <typename D>
         AggregateDataPtr * findFromRow(D & data, Key key, size_t i, Arena & pool)
         {
-            if (last_pool && last_pool != &pool)
-                throw Exception("Different pools for low cardinality aggregation data cache.", ErrorCodes::LOGICAL_ERROR);
-
-            last_pool = &pool;
-
             size_t row = getIndexAt(i);
             if (!aggregate_data_cache[row])
             {
-                auto it = data.find(key);
+                typename D::iterator it;
+                if (saved_hash)
+                    it = data.find(key, saved_hash->getElement(row));
+                else
+                    it = data.find(key);
+
                 if (it != data.end())
                     aggregate_data_cache[row] = Base::getAggregateData(it->second);
             }

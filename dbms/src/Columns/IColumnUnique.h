@@ -16,6 +16,8 @@ public:
     /// The same as getNestedColumn, but removes null map if nested column is nullable.
     virtual const ColumnPtr & getNestedNotNullableColumn() const = 0;
 
+    virtual ColumnUInt64::Ptr tryGetSavedHash() const = 0;
+
     size_t size() const override { return getNestedColumn()->size(); }
 
     /// Appends new value at the end of column (column's size is increased by 1).
