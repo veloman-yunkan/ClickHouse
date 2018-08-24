@@ -2281,6 +2281,8 @@ Block Aggregator::mergeBlocks(BlocksList & blocks, bool final)
     result.keys_size = params.keys_size;
     result.key_sizes = key_sizes;
 
+    AggregationStateCachePtr cache;
+
     for (Block & block : blocks)
     {
         if (isCancelled())
@@ -2294,7 +2296,7 @@ Block Aggregator::mergeBlocks(BlocksList & blocks, bool final)
 
     #define M(NAME, IS_TWO_LEVEL) \
         else if (result.type == AggregatedDataVariants::Type::NAME) \
-            mergeStreamsImpl(block, key_sizes, result.aggregates_pool, *result.NAME, result.NAME->data, nullptr, false);
+            mergeStreamsImpl(block, key_sizes, result.aggregates_pool, *result.NAME, cache, result.NAME->data, nullptr, false);
 
         APPLY_FOR_AGGREGATED_VARIANTS(M)
     #undef M
