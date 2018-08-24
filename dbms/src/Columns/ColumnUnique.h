@@ -91,7 +91,7 @@ public:
         index.setColumn(getRawColumnPtr());
     }
 
-    ColumnUInt64::Ptr tryGetSavedHash() const override { return index.tryGetSavedHash(); }
+    const UInt64 * tryGetSavedHash() const override { return index.tryGetSavedHash(); }
 
 private:
 

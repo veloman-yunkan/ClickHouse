@@ -261,7 +261,7 @@ public:
     ColumnType * getColumn() const { return column; }
     size_t size() const;
 
-    ColumnUInt64::Ptr tryGetSavedHash() const
+    const UInt64 * tryGetSavedHash() const
     {
         if (!use_saved_hash)
             return nullptr;
@@ -269,7 +269,7 @@ public:
         if (!saved_hash)
             calcHashes();
 
-        return saved_hash.getPtr();
+        return saved_hash.get();
     }
 
     size_t allocatedBytes() const { return index ? index->getBufferSizeInBytes() : 0; }
