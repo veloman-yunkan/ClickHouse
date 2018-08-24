@@ -326,7 +326,7 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
     {
         ColumnRawPtrs key;
         const IColumn * positions = nullptr;
-        ColumnUInt64::Ptr saved_hash;
+        const UInt64 * saved_hash;
         PaddedPODArray<AggregateDataPtr> aggregate_data_cache;
         size_t size_of_index_type = 0;
 
@@ -392,7 +392,7 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
             {
                 typename D::iterator it;
                 if (saved_hash)
-                    data.emplace(key, it, inserted, saved_hash->getElement(row));
+                    data.emplace(key, it, inserted, saved_hash[row]);
                 else
                     data.emplace(key, it, inserted);
 
@@ -419,7 +419,7 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
             {
                 typename D::iterator it;
                 if (saved_hash)
-                    it = data.find(key, saved_hash->getElement(row));
+                    it = data.find(key, saved_hash[row]);
                 else
                     it = data.find(key);
 
