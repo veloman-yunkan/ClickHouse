@@ -570,7 +570,7 @@ void NO_INLINE Aggregator::executeImpl(
     AggregateDataPtr overflow_row) const
 {
     typename Method::State state;
-    if (Method::low_cardinality_optimization)
+    if constexpr (Method::low_cardinality_optimization)
         state.init(key_columns, cache, aggregates_pool);
     else
         state.init(key_columns);
@@ -1940,7 +1940,7 @@ void NO_INLINE Aggregator::mergeStreamsImplCase(
         aggregate_columns[i] = &typeid_cast<const ColumnAggregateFunction &>(*block.safeGetByPosition(params.keys_size + i).column).getData();
 
     typename Method::State state;
-    if (Method::low_cardinality_optimization)
+    if constexpr (Method::low_cardinality_optimization)
         state.init(key_columns, cache, aggregates_pool);
     else
         state.init(key_columns);
@@ -2349,7 +2349,7 @@ void NO_INLINE Aggregator::convertBlockToTwoLevelImpl(
     std::vector<Block> & destinations) const
 {
     typename Method::State state;
-    if (Method::low_cardinality_optimization)
+    if constexpr (Method::low_cardinality_optimization)
         state.init(key_columns, cache, pool);
     else
         state.init(key_columns);
