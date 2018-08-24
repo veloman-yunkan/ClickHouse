@@ -269,7 +269,7 @@ public:
         if (!saved_hash)
             calcHashes();
 
-        return saved_hash.get();
+        return saved_hash.getPtr();
     }
 
     size_t allocatedBytes() const { return index ? index->getBufferSizeInBytes() : 0; }
