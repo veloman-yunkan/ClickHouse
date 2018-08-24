@@ -315,7 +315,7 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
     using iterator = typename Base::iterator;
     using const_iterator = typename Base::const_iterator;
 
-    Data data;
+    using Base::data;
 
     AggregationMethodSingleLowCardinalityColumn() = default;
 
@@ -325,18 +325,14 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
     struct State : public BaseState
     {
         ColumnRawPtrs key;
-        const ColumnWithDictionary * column;
         const IColumn * positions;
         PaddedPODArray<AggregateDataPtr> aggregate_data_cache;
         size_t size_of_index_type = 0;
         Arena * last_pool = nullptr;
 
-        /** Called at the start of each block processing.
-          * Sets the variables needed for the other methods called in inner loops.
-          */
         void init(ColumnRawPtrs & key_columns)
         {
-            column = typeid_cast<const ColumnWithDictionary *>(key_columns[0]);
+            auto column = typeid_cast<const ColumnWithDictionary *>(key_columns[0]);
             if (!column)
                 throw Exception("Invalid aggregation key type for AggregationMethodSingleLowCardinalityColumn method. "
                                 "Excepted LowCardinality, got " + key_columns[0]->getName(), ErrorCodes::LOGICAL_ERROR);
@@ -404,17 +400,17 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
 
                 if (inserted)
                     Base::onNewKey(*it, keys_size, keys, pool);
-                //else
-                //    aggregate_data_cache[row] = Base::getAggregateData(it->second);
+                else
+                    aggregate_data_cache[row] = Base::getAggregateData(it->second);
 
                 return &Base::getAggregateData(it->second);
             }
         }
 
-        void cacheAggregateData(size_t /*i*/, AggregateDataPtr /*data*/)
+        void cacheAggregateData(size_t i, AggregateDataPtr data)
         {
-            //size_t row = getIndexAt(i);
-            //aggregate_data_cache[row] = data;
+            size_t row = getIndexAt(i);
+            aggregate_data_cache[row] = data;
         }
 
         template <typename D>
@@ -425,13 +421,12 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
 
             last_pool = &pool;
 
-            size_t row = column->getIndexAt(i);
+            size_t row = getIndexAt(i);
             if (!aggregate_data_cache[row])
             {
                 auto it = data.find(key);
                 if (it != data.end())
-                    //aggregate_data_cache[row] =
-                    return &Base::getAggregateData(it->second);
+                    aggregate_data_cache[row] = &Base::getAggregateData(it->second);
             }
             return &aggregate_data_cache[row];
         }
