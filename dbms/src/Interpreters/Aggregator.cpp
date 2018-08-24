@@ -2204,6 +2204,8 @@ void Aggregator::mergeStream(const BlockInputStreamPtr & stream, AggregatedDataV
 
         bool no_more_keys = false;
 
+        AggregationStateCachePtr cache;
+
         BlocksList & blocks = bucket_to_blocks[-1];
         for (Block & block : blocks)
         {
@@ -2221,7 +2223,7 @@ void Aggregator::mergeStream(const BlockInputStreamPtr & stream, AggregatedDataV
 
         #define M(NAME, IS_TWO_LEVEL) \
             else if (result.type == AggregatedDataVariants::Type::NAME) \
-                mergeStreamsImpl(block, result.key_sizes, result.aggregates_pool, *result.NAME, result.NAME->data, result.without_key, no_more_keys);
+                mergeStreamsImpl(block, result.key_sizes, result.aggregates_pool, *result.NAME, cache, result.NAME->data, result.without_key, no_more_keys);
 
             APPLY_FOR_AGGREGATED_VARIANTS(M)
         #undef M
