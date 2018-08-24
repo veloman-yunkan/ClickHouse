@@ -412,7 +412,7 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
         }
 
         template <typename D>
-        AggregateDataPtr * findFromRow(D & data, Key key, size_t i, Arena & pool)
+        AggregateDataPtr * findFromRow(D & data, Key key, size_t i)
         {
             size_t row = getIndexAt(i);
             if (!aggregate_data_cache[row])

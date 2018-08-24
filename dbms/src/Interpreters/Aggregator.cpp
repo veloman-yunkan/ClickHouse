@@ -640,7 +640,7 @@ void NO_INLINE Aggregator::executeImplCase(
             /// Add only if the key already exists.
 
             if constexpr (Method::low_cardinality_optimization)
-                aggregate_data = state.findFromRow(method.data, key, i, *aggregates_pool);
+                aggregate_data = state.findFromRow(method.data, key, i);
             else
             {
                 it = method.data.find(key);
@@ -1959,7 +1959,7 @@ void NO_INLINE Aggregator::mergeStreamsImplCase(
         else
         {
             if constexpr (Method::low_cardinality_optimization)
-                aggregate_data = state.findFromRow(data, key, i, *aggregates_pool);
+                aggregate_data = state.findFromRow(data, key, i);
             else
             {
                 it = data.find(key);
