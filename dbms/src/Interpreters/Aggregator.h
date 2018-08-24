@@ -426,7 +426,7 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
             {
                 auto it = data.find(key);
                 if (it != data.end())
-                    aggregate_data_cache[row] = &Base::getAggregateData(it->second);
+                    aggregate_data_cache[row] = Base::getAggregateData(it->second);
             }
             return &aggregate_data_cache[row];
         }
