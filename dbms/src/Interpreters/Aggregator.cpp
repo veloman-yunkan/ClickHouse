@@ -604,7 +604,9 @@ void NO_INLINE Aggregator::executeImplCase(
         bool inserted = false; /// Inserted a new key, or was this key already?
 
         /// Get the key to insert into the hash table.
-        typename Method::Key key = state.getKey(key_columns, params.keys_size, i, key_sizes, keys, *aggregates_pool);
+        typename Method::Key key;
+        if constexpr (!Method::low_cardinality_optimization)
+            key = state.getKey(key_columns, params.keys_size, i, key_sizes, keys, *aggregates_pool);
 
         AggregateDataPtr * aggregate_data = nullptr;
         typename Method::iterator it; /// Is not used if Method::low_cardinality_optimization
@@ -628,7 +630,7 @@ void NO_INLINE Aggregator::executeImplCase(
             }
 
             if constexpr (Method::low_cardinality_optimization)
-                aggregate_data = state.emplaceKeyFromRow(method.data, key, i, inserted, params.keys_size, keys, *aggregates_pool);
+                aggregate_data = state.emplaceKeyFromRow(method.data, i, inserted, params.keys_size, keys, *aggregates_pool);
             else
             {
                 method.data.emplace(key, it, inserted);
@@ -640,7 +642,7 @@ void NO_INLINE Aggregator::executeImplCase(
             /// Add only if the key already exists.
 
             if constexpr (Method::low_cardinality_optimization)
-                aggregate_data = state.findFromRow(method.data, key, i);
+                aggregate_data = state.findFromRow(method.data, i);
             else
             {
                 it = method.data.find(key);
@@ -1944,12 +1946,14 @@ void NO_INLINE Aggregator::mergeStreamsImplCase(
         bool inserted = false; /// Inserted a new key, or was this key already?
 
         /// Get the key to insert into the hash table.
-        auto key = state.getKey(key_columns, params.keys_size, i, key_sizes, keys, *aggregates_pool);
+        typename Method::Key key;
+        if constexpr (!Method::low_cardinality_optimization)
+            key = state.getKey(key_columns, params.keys_size, i, key_sizes, keys, *aggregates_pool);
 
         if (!no_more_keys)
         {
             if constexpr (Method::low_cardinality_optimization)
-                aggregate_data = state.emplaceKeyFromRow(data, key, i, inserted, params.keys_size, keys, *aggregates_pool);
+                aggregate_data = state.emplaceKeyFromRow(data, i, inserted, params.keys_size, keys, *aggregates_pool);
             else
             {
                 data.emplace(key, it, inserted);
@@ -1959,7 +1963,7 @@ void NO_INLINE Aggregator::mergeStreamsImplCase(
         else
         {
             if constexpr (Method::low_cardinality_optimization)
-                aggregate_data = state.findFromRow(data, key, i);
+                aggregate_data = state.findFromRow(data, i);
             else
             {
                 it = data.find(key);

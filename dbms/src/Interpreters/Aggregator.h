@@ -375,7 +375,6 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
         template <typename D>
         AggregateDataPtr * emplaceKeyFromRow(
             D & data,
-            Key key,
             size_t i,
             bool & inserted,
             size_t keys_size,
@@ -390,6 +389,10 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
             }
             else
             {
+                ColumnRawPtrs key_columns;
+                Sizes key_sizes;
+                auto key = getKey(key_columns, 0, i, key_sizes, keys, pool);
+
                 typename D::iterator it;
                 if (saved_hash)
                     data.emplace(key, it, inserted, saved_hash[row]);
@@ -412,11 +415,17 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
         }
 
         template <typename D>
-        AggregateDataPtr * findFromRow(D & data, Key key, size_t i)
+        AggregateDataPtr * findFromRow(D & data, size_t i)
         {
             size_t row = getIndexAt(i);
             if (!aggregate_data_cache[row])
             {
+                ColumnRawPtrs key_columns;
+                Sizes key_sizes;
+                StringRefs keys;
+                Arena pool;
+                auto key = getKey(key_columns, 0, i, key_sizes, keys, pool);
+
                 typename D::iterator it;
                 if (saved_hash)
                     it = data.find(key, saved_hash[row]);
