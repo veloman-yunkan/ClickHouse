@@ -330,21 +330,35 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
         PaddedPODArray<AggregateDataPtr> aggregate_data_cache;
         size_t size_of_index_type = 0;
 
+        Arena * prev_pool = nullptr;
+        const IColumn * prev_dict = nullptr;
+
         void init(ColumnRawPtrs & key_columns)
+        {
+            throw Exception("Expected arena for AggregationMethodSingleLowCardinalityColumn::init", ErrorCodes::LOGICAL_ERROR);
+        }
+
+        void init(ColumnRawPtrs & key_columns, Arena * pool)
         {
             auto column = typeid_cast<const ColumnWithDictionary *>(key_columns[0]);
             if (!column)
                 throw Exception("Invalid aggregation key type for AggregationMethodSingleLowCardinalityColumn method. "
                                 "Excepted LowCardinality, got " + key_columns[0]->getName(), ErrorCodes::LOGICAL_ERROR);
-            key = {column->getDictionary().getNestedColumn().get()};
-            positions = column->getIndexesPtr().get();
-            saved_hash = column->getDictionary().tryGetSavedHash();
+
+            const IColumn * dict = column->getDictionary().getNestedColumn().get();
+            if (pool != prev_pool || dict != prev_dict)
+            {
+                key = {dict};
+                saved_hash = column->getDictionary().tryGetSavedHash();
+
+                AggregateDataPtr default_data = nullptr;
+                aggregate_data_cache.assign(key[0]->size(), default_data);
+            }
+
             size_of_index_type = column->getSizeOfIndexType();
+            positions = column->getIndexesPtr().get();
 
             BaseState::init(key);
-
-            AggregateDataPtr default_data = nullptr;
-            aggregate_data_cache.assign(key[0]->size(), default_data);
         }
 
         size_t getIndexAt(size_t row) const
