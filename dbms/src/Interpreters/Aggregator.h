@@ -462,7 +462,7 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
 
                 typename D::iterator it;
                 if (cache->saved_hash)
-                    it = data.find(key, saved_hash[row]);
+                    it = data.find(key, cache->saved_hash[row]);
                 else
                     it = data.find(key);
 
