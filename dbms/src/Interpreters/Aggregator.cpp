@@ -1898,10 +1898,12 @@ std::unique_ptr<IBlockInputStream> Aggregator::mergeAndConvertToBlocks(
         }
     }
 
+    AggregationStateCachePtr cache;
     if (has_at_least_one_two_level)
         for (auto & variant : non_empty_data)
             if (!variant->isTwoLevel())
                 variant->convertToTwoLevel(cache);
+
 
     AggregatedDataVariantsPtr & first = non_empty_data[0];
 
