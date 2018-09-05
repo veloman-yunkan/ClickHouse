@@ -125,7 +125,7 @@ void ParallelAggregatingBlockInputStream::Handler::onFinishThread(size_t thread_
         auto & data = *parent.many_data[thread_num];
 
         if (data.isConvertibleToTwoLevel())
-            data.convertToTwoLevel();
+            data.convertToTwoLevel(parent.threads_data[thread_num].cache);
 
         if (data.size())
             parent.aggregator.writeToTemporaryFile(data);
@@ -138,10 +138,12 @@ void ParallelAggregatingBlockInputStream::Handler::onFinish()
     {
         /// It may happen that some data has not yet been flushed,
         ///  because at the time of `onFinishThread` call, no data has been flushed to disk, and then some were.
-        for (auto & data : parent.many_data)
+        for (size_t thread_num = 0; thread_num < parent.many_data.size(); ++thread_num)
         {
+            auto & data = parent.many_data[thread_num];
+
             if (data->isConvertibleToTwoLevel())
-                data->convertToTwoLevel();
+                data->convertToTwoLevel(parent.threads_data[thread_num].cache);
 
             if (data->size())
                 parent.aggregator.writeToTemporaryFile(*data);

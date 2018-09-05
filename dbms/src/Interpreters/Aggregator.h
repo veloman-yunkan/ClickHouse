@@ -1189,7 +1189,7 @@ struct AggregatedDataVariants : private boost::noncopyable
         }
     }
 
-    void convertToTwoLevel();
+    void convertToTwoLevel(AggregationStateCachePtr & cache);
 
     #define APPLY_FOR_VARIANTS_TWO_LEVEL(M) \
         M(key32_two_level)            \

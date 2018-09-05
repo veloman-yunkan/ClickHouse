@@ -70,8 +70,10 @@ AggregatedDataVariants::~AggregatedDataVariants()
 }
 
 
-void AggregatedDataVariants::convertToTwoLevel()
+void AggregatedDataVariants::convertToTwoLevel(AggregationStateCachePtr & cache)
 {
+    cache = nullptr;
+
     if (aggregator)
         LOG_TRACE(aggregator->log, "Converting aggregation data to two-level.");
 
@@ -899,7 +901,7 @@ bool Aggregator::executeOnBlock(const Block & block, AggregatedDataVariants & re
       * It allows you to make, in the subsequent, an effective merge - either economical from memory or parallel.
       */
     if (result.isConvertibleToTwoLevel() && worth_convert_to_two_level)
-        result.convertToTwoLevel();
+        result.convertToTwoLevel(cache);
 
     /// Checking the constraints.
     if (!checkLimits(result_size, no_more_keys))
@@ -1899,7 +1901,7 @@ std::unique_ptr<IBlockInputStream> Aggregator::mergeAndConvertToBlocks(
     if (has_at_least_one_two_level)
         for (auto & variant : non_empty_data)
             if (!variant->isTwoLevel())
-                variant->convertToTwoLevel();
+                variant->convertToTwoLevel(cache);
 
     AggregatedDataVariantsPtr & first = non_empty_data[0];
 
