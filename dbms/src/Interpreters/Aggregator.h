@@ -367,7 +367,7 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
             key = {dict.get()};
 
             bool dict_in_cache = cache->dict && dict.get() == cache->dict.get();
-            bool is_shared_dict = column->getDictionary()->isSharedDictionary();
+            bool is_shared_dict = column->isSharedDictionary();
 
             if (pool == nullptr || pool != cache->pool || !dict_in_cache)
             {
