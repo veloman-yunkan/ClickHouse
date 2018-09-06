@@ -371,7 +371,7 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
                 cache->pool = pool;
             }
 
-            if (dict.get() != cache->dict.get())
+            if (cache->dict && dict.get() != cache->dict.get())
             {
                 cache->saved_hash = column->getDictionary().tryGetSavedHash();
                 cache->dict = dict;
