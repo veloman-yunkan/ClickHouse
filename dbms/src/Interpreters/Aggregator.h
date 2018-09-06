@@ -340,7 +340,7 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
             const UInt64 * saved_hash = nullptr;
             PaddedPODArray<AggregateDataPtr> aggregate_data_cache;
             Arena * pool = nullptr;
-            const IColumn * dict = nullptr;
+            ColumnPtr dict = nullptr;
         };
 
         Cache * cache = nullptr;
@@ -361,17 +361,19 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
                 cache_ptr = std::make_shared<Cache>();
             cache = static_cast<Cache *>(cache_ptr.get());
 
-            const IColumn * dict = column->getDictionary().getNestedColumn().get();
-            key = {dict};
+            ColumnPtr dict = column->getDictionary().getNestedColumn();
+            key = {dict.get()};
 
-            if (pool != cache->pool || dict != cache->dict)
+            if (pool == nullptr || pool != cache->pool)
             {
-                cache->saved_hash = column->getDictionary().tryGetSavedHash();
-
                 AggregateDataPtr default_data = nullptr;
                 cache->aggregate_data_cache.assign(key[0]->size(), default_data);
-
                 cache->pool = pool;
+            }
+
+            if (dict.get() != cache->dict.get())
+            {
+                cache->saved_hash = column->getDictionary().tryGetSavedHash();
                 cache->dict = dict;
             }
 

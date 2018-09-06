@@ -1945,7 +1945,7 @@ void NO_INLINE Aggregator::mergeStreamsImplCase(
 
     typename Method::State state;
     if constexpr (Method::low_cardinality_optimization)
-        state.init(key_columns, cache, aggregates_pool);
+        state.init(key_columns, cache, nullptr);
     else
         state.init(key_columns);
 
