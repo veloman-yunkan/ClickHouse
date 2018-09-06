@@ -335,16 +335,17 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
         const IColumn * positions = nullptr;
         size_t size_of_index_type = 0;
 
+        const UInt64 * saved_hash = nullptr;
+        PaddedPODArray<AggregateDataPtr> aggregate_data;
+        PaddedPODArray<AggregateDataPtr> * aggregate_data_cache;
+
         struct Cache : public AggregationStateCache
         {
             const UInt64 * saved_hash = nullptr;
-            PaddedPODArray<AggregateDataPtr> aggregate_data_cache;
+            PaddedPODArray<AggregateDataPtr> aggregate_data;
             Arena * pool = nullptr;
             ColumnPtr dict = nullptr;
         };
-
-        Cache * cache = nullptr;
-        AggregateDataPtr empty_state = nullptr;
 
         void init(ColumnRawPtrs &)
         {
@@ -360,24 +361,38 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
 
             if (!cache_ptr)
                 cache_ptr = std::make_shared<Cache>();
-            cache = static_cast<Cache *>(cache_ptr.get());
+            auto cache = static_cast<Cache *>(cache_ptr.get());
 
             ColumnPtr dict = column->getDictionary().getNestedColumn();
             key = {dict.get()};
 
             bool dict_in_cache = cache->dict && dict.get() == cache->dict.get();
+            bool is_shared_dict = column->getDictionary()->isSharedDictionary();
 
             if (pool == nullptr || pool != cache->pool || !dict_in_cache)
             {
+
                 AggregateDataPtr default_data = nullptr;
-                cache->aggregate_data_cache.assign(key[0]->size(), default_data);
-                cache->pool = pool;
+                aggregate_data.assign(key[0]->size(), default_data);
+
+                aggregate_data_cache = &aggregate_data;
+                if (is_shared_dict)
+                {
+                    cache->pool = pool;
+                    cache->aggregate_data = std::move(aggregate_data);
+                    aggregate_data_cache = &cache->aggregate_data;
+                }
             }
 
             if (!dict_in_cache)
             {
-                cache->saved_hash = column->getDictionary().tryGetSavedHash();
-                cache->dict = dict;
+                saved_hash = column->getDictionary().tryGetSavedHash();
+
+                if (is_shared_dict)
+                {
+                    cache->dict = dict;
+                    cache->saved_hash = saved_hash;
+                }
             }
 
             size_of_index_type = column->getSizeOfIndexType();
@@ -421,10 +436,10 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
             Arena & pool)
         {
             size_t row = getIndexAt(i);
-            if (cache->aggregate_data_cache[row])
+            if ((*aggregate_data_cache)[row])
             {
                 inserted = false;
-                return &cache->aggregate_data_cache[row];
+                return &(*aggregate_data_cache)[row];
             }
             else
             {
@@ -433,15 +448,15 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
                 auto key = getKey(key_columns, 0, i, key_sizes, keys, pool);
 
                 typename D::iterator it;
-                if (cache->saved_hash)
-                    data.emplace(key, it, inserted, cache->saved_hash[row]);
+                if (saved_hash)
+                    data.emplace(key, it, inserted, saved_hash[row]);
                 else
                     data.emplace(key, it, inserted);
 
                 if (inserted)
                     Base::onNewKey(*it, keys_size, keys, pool);
                 else
-                    cache->aggregate_data_cache[row] = Base::getAggregateData(it->second);
+                    (*aggregate_data_cache)[row] = Base::getAggregateData(it->second);
 
                 return &Base::getAggregateData(it->second);
             }
@@ -450,14 +465,14 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
         void cacheAggregateData(size_t i, AggregateDataPtr data)
         {
             size_t row = getIndexAt(i);
-            cache->aggregate_data_cache[row] = data;
+            (*aggregate_data_cache)[row] = data;
         }
 
         template <typename D>
         AggregateDataPtr * findFromRow(D & data, size_t i)
         {
             size_t row = getIndexAt(i);
-            if (!cache->aggregate_data_cache[row])
+            if (!(*aggregate_data_cache)[row])
             {
                 ColumnRawPtrs key_columns;
                 Sizes key_sizes;
@@ -466,15 +481,15 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
                 auto key = getKey(key_columns, 0, i, key_sizes, keys, pool);
 
                 typename D::iterator it;
-                if (cache->saved_hash)
-                    it = data.find(key, cache->saved_hash[row]);
+                if (saved_hash)
+                    it = data.find(key, saved_hash[row]);
                 else
                     it = data.find(key);
 
                 if (it != data.end())
-                    cache->aggregate_data_cache[row] = Base::getAggregateData(it->second);
+                    (*aggregate_data_cache)[row] = Base::getAggregateData(it->second);
             }
-            return &cache->aggregate_data_cache[row];
+            return &(*aggregate_data_cache)[row];
         }
     };
 
