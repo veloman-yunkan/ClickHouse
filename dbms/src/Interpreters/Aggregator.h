@@ -365,18 +365,16 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
             ColumnPtr dict = column->getDictionary().getNestedColumn();
             key = {dict.get()};
 
-            if (pool == nullptr)
-            {
-                cache->aggregate_data_cache.resize(0);
-            }
-            else if (pool != cache->pool)
+            bool dict_in_cache = cache->dict && dict.get() == cache->dict.get();
+
+            if (pool == nullptr || pool != cache->pool || !dict_in_cache)
             {
                 AggregateDataPtr default_data = nullptr;
                 cache->aggregate_data_cache.assign(key[0]->size(), default_data);
                 cache->pool = pool;
             }
 
-            if (cache->dict && dict.get() != cache->dict.get())
+            if (!dict_in_cache)
             {
                 cache->saved_hash = column->getDictionary().tryGetSavedHash();
                 cache->dict = dict;
@@ -423,7 +421,7 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
             Arena & pool)
         {
             size_t row = getIndexAt(i);
-            if (!cache->aggregate_data_cache.empty() && cache->aggregate_data_cache[row])
+            if (cache->aggregate_data_cache[row])
             {
                 inserted = false;
                 return &cache->aggregate_data_cache[row];
@@ -442,7 +440,7 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
 
                 if (inserted)
                     Base::onNewKey(*it, keys_size, keys, pool);
-                else if(!cache->aggregate_data_cache.empty())
+                else
                     cache->aggregate_data_cache[row] = Base::getAggregateData(it->second);
 
                 return &Base::getAggregateData(it->second);
@@ -452,15 +450,14 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
         void cacheAggregateData(size_t i, AggregateDataPtr data)
         {
             size_t row = getIndexAt(i);
-            if (!cache->aggregate_data_cache.empty())
-                cache->aggregate_data_cache[row] = data;
+            cache->aggregate_data_cache[row] = data;
         }
 
         template <typename D>
         AggregateDataPtr * findFromRow(D & data, size_t i)
         {
             size_t row = getIndexAt(i);
-            if (cache->aggregate_data_cache.empty() || !cache->aggregate_data_cache[row])
+            if (!cache->aggregate_data_cache[row])
             {
                 ColumnRawPtrs key_columns;
                 Sizes key_sizes;
@@ -473,14 +470,6 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
                     it = data.find(key, cache->saved_hash[row]);
                 else
                     it = data.find(key);
-
-                if (cache->aggregate_data_cache.empty())
-                {
-                    if (it != data.end())
-                        return &Base::getAggregateData(it->second);
-                    else
-                        return &empty_state;
-                }
 
                 if (it != data.end())
                     cache->aggregate_data_cache[row] = Base::getAggregateData(it->second);
