@@ -369,17 +369,20 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
             bool dict_in_cache = cache->dict && dict.get() == cache->dict.get();
             bool is_shared_dict = column->isSharedDictionary();
 
+            saved_hash = cache->saved_hash;
+            aggregate_data_cache = &cache->aggregate_data;
+
             if (pool == nullptr || pool != cache->pool || !dict_in_cache)
             {
 
                 AggregateDataPtr default_data = nullptr;
                 aggregate_data.assign(key[0]->size(), default_data);
-
                 aggregate_data_cache = &aggregate_data;
+
                 if (is_shared_dict)
                 {
                     cache->pool = pool;
-                    cache->aggregate_data = std::move(aggregate_data);
+                    cache->aggregate_data.swap(aggregate_data);
                     aggregate_data_cache = &cache->aggregate_data;
                 }
             }
