@@ -345,6 +345,7 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
             PaddedPODArray<AggregateDataPtr> aggregate_data;
             Arena * pool = nullptr;
             ColumnPtr dict = nullptr;
+            UInt128 dict_hash;
         };
 
         void init(ColumnRawPtrs &)
@@ -365,8 +366,10 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
 
             ColumnPtr dict = column->getDictionary().getNestedColumn();
             key = {dict.get()};
+            Uint128 dict_hash = column->getDictionary().getHash();
 
-            bool dict_in_cache = cache->dict && dict.get() == cache->dict.get();
+            // bool dict_in_cache = cache->dict && dict.get() == cache->dict.get();
+            bool dict_in_cache = cache->dict && dict->size() == cache->dict->size() && dict_hash == cache->dict_hash;
             bool is_shared_dict = column->isSharedDictionary();
 
             saved_hash = cache->saved_hash;
@@ -395,6 +398,7 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
                 {
                     cache->dict = dict;
                     cache->saved_hash = saved_hash;
+                    cache->dict_hash = dict_hash;
                 }
             }
 
