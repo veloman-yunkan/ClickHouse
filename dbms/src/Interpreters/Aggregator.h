@@ -13,6 +13,7 @@
 #include <Common/HashTable/HashMap.h>
 #include <Common/HashTable/TwoLevelHashMap.h>
 #include <common/ThreadPool.h>
+#include <Common/UInt128.h>
 
 #include <DataStreams/IBlockInputStream.h>
 #include <DataStreams/SizeLimits.h>
