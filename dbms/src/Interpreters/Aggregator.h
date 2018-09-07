@@ -367,7 +367,7 @@ struct AggregationMethodSingleLowCardinalityColumn : public SingleColumnMethod
 
             ColumnPtr dict = column->getDictionary().getNestedColumn();
             key = {dict.get()};
-            Uint128 dict_hash = column->getDictionary().getHash();
+            UInt128 dict_hash = column->getDictionary().getHash();
 
             // bool dict_in_cache = cache->dict && dict.get() == cache->dict.get();
             bool dict_in_cache = cache->dict && dict->size() == cache->dict->size() && dict_hash == cache->dict_hash;
