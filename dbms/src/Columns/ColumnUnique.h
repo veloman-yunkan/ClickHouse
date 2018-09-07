@@ -108,7 +108,7 @@ private:
     class IncrementalHash
     {
     private:
-        SipHash hash;
+        UInt128 hash;
         size_t num_added_rows = 0;
     public:
         UInt128 getHash(const ColumnType & column);
@@ -528,12 +528,18 @@ template <typename ColumnType>
 UInt128 ColumnUnique<ColumnType>::IncrementalHash::getHash(const ColumnType & column)
 {
     size_t column_size = column.size();
-    for (; num_added_rows < column_size; ++num_added_rows)
-        column.updateHashWithValue(num_added_rows, hash);
 
-    UInt128 value;
-    hash.get128(value.low, value.high);
-    return value;
+    if (column_size != num_added_rows)
+    {
+        SipHash sip_hash;
+        for (size_t i = 0; i < column_size; ++i)
+            column.updateHashWithValue(i, sip_hash);
+
+        num_added_rows = column_size;
+        sip_hash.get128(hash.low, hash.high);
+    }
+
+    return hash;
 }
 
 };
