@@ -109,10 +109,12 @@ private:
     {
     private:
         UInt128 hash;
-        size_t num_added_rows = 0;
+        std::atomic<size_t> num_added_rows;
 
         std::mutex mutex;
     public:
+        IncrementalHash() : num_added_rows(0) {}
+
         UInt128 getHash(const ColumnType & column);
     };
 
@@ -531,15 +533,15 @@ UInt128 ColumnUnique<ColumnType>::IncrementalHash::getHash(const ColumnType & co
 {
     size_t column_size = column.size();
 
-    if (column_size != num_added_rows)
+    if (column_size != num_added_rows.load())
     {
         SipHash sip_hash;
         for (size_t i = 0; i < column_size; ++i)
             column.updateHashWithValue(i, sip_hash);
 
         std::lock_guard lock(mutex);
-        num_added_rows = column_size;
         sip_hash.get128(hash.low, hash.high);
+        num_added_rows = column_size;
     }
 
     return hash;
