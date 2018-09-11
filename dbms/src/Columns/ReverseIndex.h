@@ -267,9 +267,9 @@ public:
             return nullptr;
 
         if (!saved_hash)
-            std::call_once(once_flag, calcHashes);
+            std::call_once(once_flag, [this]() { this->calcHashes(); });
 
-        return saved_hash.get();
+        return &saved_hash->getData()[0];
     }
 
     size_t allocatedBytes() const { return index ? index->getBufferSizeInBytes() : 0; }
