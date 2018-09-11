@@ -110,6 +110,8 @@ private:
     private:
         UInt128 hash;
         size_t num_added_rows = 0;
+
+        std::mutex mutex;
     public:
         UInt128 getHash(const ColumnType & column);
     };
@@ -535,6 +537,7 @@ UInt128 ColumnUnique<ColumnType>::IncrementalHash::getHash(const ColumnType & co
         for (size_t i = 0; i < column_size; ++i)
             column.updateHashWithValue(i, sip_hash);
 
+        std::lock_guard lock(mutex);
         num_added_rows = column_size;
         sip_hash.get128(hash.low, hash.high);
     }
