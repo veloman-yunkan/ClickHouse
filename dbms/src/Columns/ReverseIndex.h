@@ -267,7 +267,11 @@ public:
             return nullptr;
 
         if (!saved_hash)
-            std::call_once(once_flag, [this]() { this->calcHashes(); });
+        {
+            std::lock_guard lock(saved_hash_mutex);
+            if (!saved_hash)
+                calcHashes();
+        }
 
         return &saved_hash->getData()[0];
     }
@@ -284,7 +288,7 @@ private:
     /// Lazy initialized.
     std::unique_ptr<IndexMapType> index;
     mutable ColumnUInt64::MutablePtr saved_hash;
-    mutable std::once_flag once_flag;
+    mutable std::mutex saved_hash_mutex;
 
     void buildIndex();
 
