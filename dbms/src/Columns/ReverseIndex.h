@@ -246,7 +246,7 @@ class ReverseIndex
 {
 public:
     explicit ReverseIndex(UInt64 num_prefix_rows_to_skip, UInt64 base_index)
-            : num_prefix_rows_to_skip(num_prefix_rows_to_skip), base_index(base_index) {}
+            : num_prefix_rows_to_skip(num_prefix_rows_to_skip), base_index(base_index), saved_hash_ptr(nullptr) {}
 
     void setColumn(ColumnType * column_);
 
@@ -266,14 +266,27 @@ public:
         if (!use_saved_hash)
             return nullptr;
 
-        if (!saved_hash)
+        UInt64 * ptr = saved_hash_ptr.load();
+        if (!ptr)
         {
-            std::lock_guard lock(saved_hash_mutex);
-            if (!saved_hash)
-                calcHashes();
+            if (saved_hash)
+            {
+                ptr =  &saved_hash->getData()[0];
+                saved_hash_ptr.store(ptr);
+            }
+            else
+            {
+                auto hash = calcHashes();
+                ptr = &hash->getData()[0];
+                UInt64 * expected = nullptr;
+                if(saved_hash_ptr.compare_exchange_strong(expected, ptr))
+                    saved_hash = std::move(hash);
+                else
+                    ptr = expected;
+            }
         }
 
-        return &saved_hash->getData()[0];
+        return ptr;
     }
 
     size_t allocatedBytes() const { return index ? index->getBufferSizeInBytes() : 0; }
@@ -288,7 +301,7 @@ private:
     /// Lazy initialized.
     std::unique_ptr<IndexMapType> index;
     mutable ColumnUInt64::MutablePtr saved_hash;
-    mutable std::mutex saved_hash_mutex;
+    mutable std::atomic<UInt64 *> saved_hash_ptr;
 
     void buildIndex();
 
@@ -304,7 +317,7 @@ private:
             return StringRefHash()(ref);
     }
 
-    void calcHashes() const;
+    ColumnUInt64::MutablePtr calcHashes() const;
 };
 
 
@@ -342,7 +355,7 @@ void ReverseIndex<IndexType, ColumnType>::buildIndex()
     index = std::make_unique<IndexMapType>(size);
 
     if constexpr (use_saved_hash)
-        calcHashes();
+        saved_hash = calcHashes();
 
     auto & state = index->getState();
     state.index_column = column;
@@ -370,19 +383,18 @@ void ReverseIndex<IndexType, ColumnType>::buildIndex()
 }
 
 template <typename IndexType, typename ColumnType>
-void ReverseIndex<IndexType, ColumnType>::calcHashes() const
+ColumnUInt64::MutablePtr ReverseIndex<IndexType, ColumnType>::calcHashes() const
 {
     if (!column)
         throw Exception("ReverseIndex can't build index because index column wasn't set.", ErrorCodes::LOGICAL_ERROR);
 
-    if (saved_hash)
-        return;
-
     auto size = column->size();
-    saved_hash = ColumnUInt64::create(size);
+    auto hash = ColumnUInt64::create(size);
 
     for (auto row : ext::range(0, size))
-        saved_hash->getElement(row) = getHash(column->getDataAt(row));
+        hash->getElement(row) = getHash(column->getDataAt(row));
+
+    return std::move(hash);
 };
 
 template <typename IndexType, typename ColumnType>
