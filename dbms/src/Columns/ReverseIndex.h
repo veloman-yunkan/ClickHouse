@@ -269,21 +269,13 @@ public:
         UInt64 * ptr = saved_hash_ptr.load();
         if (!ptr)
         {
-            if (saved_hash)
-            {
-                ptr =  &saved_hash->getData()[0];
-                saved_hash_ptr.store(ptr);
-            }
+            auto hash = calcHashes();
+            ptr = &hash->getData()[0];
+            UInt64 * expected = nullptr;
+            if(saved_hash_ptr.compare_exchange_strong(expected, ptr))
+                saved_hash = std::move(hash);
             else
-            {
-                auto hash = calcHashes();
-                ptr = &hash->getData()[0];
-                UInt64 * expected = nullptr;
-                if(saved_hash_ptr.compare_exchange_strong(expected, ptr))
-                    saved_hash = std::move(hash);
-                else
-                    ptr = expected;
-            }
+                ptr = expected;
         }
 
         return ptr;

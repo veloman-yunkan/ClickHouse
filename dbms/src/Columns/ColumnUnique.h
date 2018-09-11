@@ -533,6 +533,8 @@ UInt128 ColumnUnique<ColumnType>::IncrementalHash::getHash(const ColumnType & co
 {
     size_t column_size = column.size();
 
+    UInt128 cur_hash = hash;
+
     if (column_size != num_added_rows.load())
     {
         SipHash sip_hash;
@@ -543,11 +545,12 @@ UInt128 ColumnUnique<ColumnType>::IncrementalHash::getHash(const ColumnType & co
         if (column_size != num_added_rows.load())
         {
             sip_hash.get128(hash.low, hash.high);
+            cur_hash = hash;
             num_added_rows.store(column_size);
         }
     }
 
-    return hash;
+    return cur_hash;
 }
 
 };
