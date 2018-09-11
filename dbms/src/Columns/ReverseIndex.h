@@ -267,9 +267,9 @@ public:
             return nullptr;
 
         if (!saved_hash)
-            calcHashes();
+            std::call_once(once_flag, calcHashes);
 
-        return &saved_hash->getData()[0];
+        return saved_hash.get();
     }
 
     size_t allocatedBytes() const { return index ? index->getBufferSizeInBytes() : 0; }
@@ -284,6 +284,7 @@ private:
     /// Lazy initialized.
     std::unique_ptr<IndexMapType> index;
     mutable ColumnUInt64::MutablePtr saved_hash;
+    mutable std::once_flag once_flag;
 
     void buildIndex();
 
@@ -301,7 +302,6 @@ private:
 
     void calcHashes() const;
 };
-
 
 
 template <typename IndexType, typename ColumnType>
@@ -338,13 +338,7 @@ void ReverseIndex<IndexType, ColumnType>::buildIndex()
     index = std::make_unique<IndexMapType>(size);
 
     if constexpr (use_saved_hash)
-    {
-        if (!saved_hash)
-        {
-            saved_hash = ColumnUInt64::create(size);
-            calcHashes();
-        }
-    }
+        calcHashes();
 
     auto & state = index->getState();
     state.index_column = column;
@@ -376,6 +370,9 @@ void ReverseIndex<IndexType, ColumnType>::calcHashes() const
 {
     if (!column)
         throw Exception("ReverseIndex can't build index because index column wasn't set.", ErrorCodes::LOGICAL_ERROR);
+
+    if (saved_hash)
+        return;
 
     auto size = column->size();
     saved_hash = ColumnUInt64::create(size);
